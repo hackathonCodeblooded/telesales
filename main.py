@@ -11,6 +11,7 @@ import os
 from sqlalchemy import create_engine, Table, Column, Integer, String, MetaData
 from sqlalchemy.sql import insert
 from typing import Optional
+from datetime import date
 
 import dynamoDb
 from diarization import diarize_audio
@@ -84,7 +85,7 @@ def read_item(item_id: int):
 @app.post("/upload-audio")
 async def upload_audio(
     file: UploadFile = File(...),
-    agent_id: str = Form(...),
+    agent_id: int = Form(...),
     agent_name: str = Form("abcd"),
     customer_phone_number: str = Form(...)
 ):
@@ -265,3 +266,7 @@ def get_overall_agents_metrics():
 @app.get("/get-all-data")
 def get_all_data():
   return dynamoDb.fetch_all_items()
+  
+@app.get("/get-business-insights")
+def get_business_insights(date_param: Optional[date] = Query(None, description="Filter by created_at date")):
+  return []

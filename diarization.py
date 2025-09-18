@@ -8,11 +8,49 @@ from mutagen.mp3 import MP3
 
 import dynamoDb
 
+genai.configure(api_key="AIzaSyAmubwjcP1LxKFEpFU0joUcKTZrVjcYb8A")
+model = genai.GenerativeModel("gemini-1.5-flash")
+
+def analyze_transcript(transcript_text: str):
+
+  prompt = f"""
+  I am providing you with a conversation between a customer and an agent. Based on the conversation, please provide a JSON object with the following parameters and data types: 
+  - **agent_overall_rating:** An optional float representing the agent's overall performance rating from 1.0 to 5.0. 
+  - **customer_sentiment_score:** An optional float representing the customer's sentiment score, with a higher number indicating a more positive sentiment. 
+  - **conversation_quality_score:** An optional float representing the overall quality of the conversation, including clarity and flow. 
+  - **agent_tone_score:** An optional float representing the agent's tone and politeness. 
+  - **compliance_score:** An optional float representing how well the agent adhered to company policies and regulations. 
+  - **responsiveness_score:** An optional float representing how quickly and effectively the agent responded to the customer's queries. 
+  - **adaptability_score:** An optional float representing the agent's ability to adapt to the customer's needs and conversation flow. 
+  - **product_awareness_score:** An optional float representing the agent's knowledge of the product or service discussed. 
+  - **problem_resolution_score:** An optional float representing how effectively the agent resolved the customer's problem. 
+  - **call_summarization:** An optional string providing a concise summary of the entire call. 
+  - **actionable_insights:** An optional list of strings detailing specific actions the agent can take to improve their performance and improve business/product for real-estate listing and seeker & owner packages. 
+  Please generate the JSON object only, without any additional text or explanations.
+
+  {transcript_text}
+  """
+
+  response = model.generate_content(
+    [
+      {
+        "role": "user",
+        "parts": [
+          {"text": prompt}
+        ]
+      }
+    ],
+    generation_config={"temperature": 0.2}
+  )
+
+  # The response text should contain your JSON
+  return response.text
+
 def get_mp3_duration(file_bytes: bytes) -> float:
     audio = MP3(BytesIO(file_bytes))
     return audio.info.length
 
-def diarize_audio(audio_bytes: bytes, agent_id: str, customer_phone_number: str, s3_url: str, agent_name: str):
+def diarize_audio(audio_bytes: bytes, agent_id: int, customer_phone_number: str, s3_url: str, agent_name: str):
   genai.configure(api_key="AIzaSyAmubwjcP1LxKFEpFU0joUcKTZrVjcYb8A")
   print("Uploading start ")
   # 2. Choose a Gemini model that supports audio
@@ -55,19 +93,27 @@ def diarize_audio(audio_bytes: bytes, agent_id: str, customer_phone_number: str,
     ],
     generation_config={"temperature": 0.2}
   )
+  
+  print("diarization done: ", response.text)
+  
+  result = analyze_transcript(response.text)
+  
+  print("analyze_transcript done:", result)
 
 
 
-  segment = TranscriptDTO(
+
+  segment = dynamoDb.map_analysis_to_dto(
     transcript=response.text
     , agent_id=agent_id
     , customer_phone_number=customer_phone_number
     , audio_s3_path=s3_url
     , agent_name=agent_name
     , call_duration=get_mp3_duration(audio_bytes)
+    , analysis_json=result
   )
+  
+  print("segment done")
 
   dynamoDb.insert_one(segment.dict())
   print(segment.dict())
-
-  print(response.text)
