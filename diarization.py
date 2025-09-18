@@ -5,7 +5,7 @@ from fastapi import UploadFile
 import uuid
 from  TranscriptionDto import TranscriptDTO
 
-import mongoConnection
+import dynamoDb
 
 def diarize_audio(audio_bytes: bytes, agent_id: str, customer_phone_number: str, s3_url: str):
   genai.configure(api_key="AIzaSyAmubwjcP1LxKFEpFU0joUcKTZrVjcYb8A")
@@ -55,7 +55,7 @@ def diarize_audio(audio_bytes: bytes, agent_id: str, customer_phone_number: str,
     , audio_s3_path=s3_url
   )
 
-  mongoConnection.insert_one(segment.dict())
+  dynamoDb.insert_one(segment.dict())
   print(segment.dict())
 
   print(response.text)
