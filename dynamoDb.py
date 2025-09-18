@@ -19,8 +19,10 @@ def insert_one(document: dict):
     if "id" not in document:
         document["id"] = str(uuid.uuid4())
 
+
     document["created_at"] = datetime.utcnow().isoformat()
     document["updated_at"] = datetime.utcnow().isoformat()
+    document["call_id"] = int(uuid.uuid4().int >> 64)
 
     try:
         table.put_item(Item=document)
@@ -49,4 +51,14 @@ def find_items(filter_expression):
   )
   return response["Items"]
 
+def fetch_all_items():
+    items = []
+    response = table.scan()  # fetch all fields
+    items.extend(response.get("Items", []))
 
+    # Handle pagination if table has more than 1 MB of data
+    while 'LastEvaluatedKey' in response:
+        response = table.scan(ExclusiveStartKey=response['LastEvaluatedKey'])
+        items.extend(response.get("Items", []))
+
+    return items

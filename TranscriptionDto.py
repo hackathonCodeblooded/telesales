@@ -15,7 +15,7 @@ class TranscriptDTO(BaseModel):
     metadata: Optional[dict] = None
 
     # Fields from your notes
-    call_id: Optional[int] = None
+    call_id: Optional[str] = None
     agent_overall_rating: Optional[float] = None
     call_duration: Optional[float] = None
     customer_sentiment_score: Optional[float] = None

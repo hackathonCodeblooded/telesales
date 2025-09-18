@@ -85,6 +85,7 @@ def read_item(item_id: int):
 async def upload_audio(
     file: UploadFile = File(...),
     agent_id: str = Form(...),
+    agent_name: str = Form("abcd"),
     customer_phone_number: str = Form(...)
 ):
   try:
@@ -111,8 +112,11 @@ async def upload_audio(
     # Create S3 URL
     s3_url = f"https://{S3_BUCKET}.s3.{AWS_REGION}.amazonaws.com/{unique_filename}"
     print("S3 URL:", s3_url)
-
-    diarize_audio(audio_bytes, agent_id, customer_phone_number, s3_url)
+    
+    if not agent_name:
+        agent_name = f"Agent_{agent_id}"
+        
+    diarize_audio(audio_bytes, agent_id, customer_phone_number, s3_url, agent_name)
     return JSONResponse(
       content={"message": "File uploaded successfully", "s3_url": s3_url},
       status_code=200)
@@ -162,7 +166,7 @@ def get_agent_rating_data(
 
 
 @app.get("/v2/agent-rating-data")
-def get_agent_rating_data(
+def get_agent_rating_dataV2(
     agent_id: Optional[int] = Query(None, description="Agent ID"),
     customer_phone_number: Optional[str] = Query(None,
                                                  description="Customer phone number")
@@ -182,7 +186,7 @@ def get_agent_rating_data(
     query["customer_phone_number"] = customer_phone_number
 
   filter_exp = (
-    Attr("customer_phone_number").eq(customer_phone_number) &
+    Attr("customer_phone_number").eq(str(customer_phone_number)) |
     Attr("agent_id").eq(agent_id)
   )
 
@@ -256,3 +260,8 @@ def get_overall_agents_metrics():
     ]
   }
   return response
+  
+  
+@app.get("/get-all-data")
+def get_all_data():
+  return dynamoDb.fetch_all_items()

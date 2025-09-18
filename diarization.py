@@ -7,7 +7,7 @@ from  TranscriptionDto import TranscriptDTO
 
 import dynamoDb
 
-def diarize_audio(audio_bytes: bytes, agent_id: str, customer_phone_number: str, s3_url: str):
+def diarize_audio(audio_bytes: bytes, agent_id: str, customer_phone_number: str, s3_url: str, agent_name: str):
   genai.configure(api_key="AIzaSyAmubwjcP1LxKFEpFU0joUcKTZrVjcYb8A")
   print("Uploading start ")
   # 2. Choose a Gemini model that supports audio
@@ -53,6 +53,7 @@ def diarize_audio(audio_bytes: bytes, agent_id: str, customer_phone_number: str,
     , agent_id=agent_id
     , customer_phone_number=customer_phone_number
     , audio_s3_path=s3_url
+    , agent_name=agent_name
   )
 
   dynamoDb.insert_one(segment.dict())
