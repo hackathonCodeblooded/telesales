@@ -1,3 +1,5 @@
+import io
+
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException, Query
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
@@ -94,10 +96,10 @@ async def upload_audio(
 
     # Create unique filename to avoid overwriting in S3
     unique_filename = f"{uuid.uuid4().hex}_{original_filename}"
-
+    audio_bytes = await file.read()
     # Upload to S3
     s3.upload_fileobj(
-      file.file,
+      io.BytesIO(audio_bytes),
       S3_BUCKET,
       unique_filename,
       ExtraArgs={"ContentType": file.content_type}
@@ -108,18 +110,7 @@ async def upload_audio(
     s3_url = f"https://{S3_BUCKET}.s3.{AWS_REGION}.amazonaws.com/{unique_filename}"
     print("S3 URL:", s3_url)
 
-    # Insert data into DB
-    # with engine.connect() as conn:
-    #   stmt = insert(calls).values(
-    #     agent_id=agent_id,
-    #     customer_phone_number=customer_phone_number,
-    #     audio_s3_path=s3_url
-    #   ).returning(calls.c.id)
-    #   result = conn.execute(stmt)
-    #   conn.commit()
-    #   print("Inserted metadata into DB")
-
-    diarize_audio(file, agent_id, customer_phone_number, s3_url)
+    diarize_audio(audio_bytes, agent_id, customer_phone_number, s3_url)
     return JSONResponse(
       content={"message": "File uploaded successfully", "s3_url": s3_url},
       status_code=200)
