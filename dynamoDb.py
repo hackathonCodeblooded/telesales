@@ -2,6 +2,8 @@ import uuid
 from datetime import datetime
 import boto3
 from botocore.exceptions import ClientError
+from boto3.dynamodb.conditions import Key
+from boto3.dynamodb.conditions import Attr
 
 # --- DynamoDB Setup ---
 dynamodb = boto3.resource("dynamodb", region_name="us-east-1")  # change region if needed
@@ -34,3 +36,22 @@ def insert_many(documents: list):
             doc["created_at"] = datetime.utcnow().isoformat()
             doc["updated_at"] = datetime.utcnow().isoformat()
             batch.put_item(Item=doc)
+
+
+def query_by_agent(agent_id: str):
+  response = table.query(
+    KeyConditionExpression=Key("agent_id").eq(agent_id)
+  )
+  return response["Items"]
+
+def get_by_id(call_id: str):
+  response = table.get_item(Key={"call_id": call_id})
+  return response.get("Item")
+
+def find_by_phone(phone: str):
+  response = table.scan(
+    FilterExpression=Attr("customer_phone_number").eq(phone)
+  )
+  return response["Items"]
+
+
