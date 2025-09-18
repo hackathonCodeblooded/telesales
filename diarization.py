@@ -4,8 +4,13 @@ import google.generativeai as genai
 from fastapi import UploadFile
 import uuid
 from  TranscriptionDto import TranscriptDTO
+from mutagen.mp3 import MP3
 
 import dynamoDb
+
+def get_mp3_duration(file_bytes: bytes) -> float:
+    audio = MP3(BytesIO(file_bytes))
+    return audio.info.length
 
 def diarize_audio(audio_bytes: bytes, agent_id: str, customer_phone_number: str, s3_url: str, agent_name: str):
   genai.configure(api_key="AIzaSyAmubwjcP1LxKFEpFU0joUcKTZrVjcYb8A")
@@ -23,13 +28,18 @@ def diarize_audio(audio_bytes: bytes, agent_id: str, customer_phone_number: str,
 
   prompt = """
   You are a speaker diarization system. 
-  Transcribe the audio and split by speaker (Speaker 1, Speaker 2, ...).
-  For each segment, give:
-  - speaker label
+  Transcribe the audio and split it by speaker. 
+
+  Map the speakers as follows:
+  - Speaker 1 → agent
+  - Speaker 2 → customer
+
+  For each segment, provide:
+  - speaker label (agent or customer)
   - start time
   - end time
   - spoken text
-  
+
   Output strictly as JSON in an array of objects.
   """
 
@@ -54,6 +64,7 @@ def diarize_audio(audio_bytes: bytes, agent_id: str, customer_phone_number: str,
     , customer_phone_number=customer_phone_number
     , audio_s3_path=s3_url
     , agent_name=agent_name
+    , call_duration=get_mp3_duration(audio_bytes)
   )
 
   dynamoDb.insert_one(segment.dict())

@@ -4,6 +4,7 @@ import boto3
 from botocore.exceptions import ClientError
 from boto3.dynamodb.conditions import Key
 from boto3.dynamodb.conditions import Attr
+from decimal import Decimal
 
 # --- DynamoDB Setup ---
 dynamodb = boto3.resource("dynamodb", region_name="us-east-1")  # change region if needed
@@ -11,6 +12,17 @@ dynamodb = boto3.resource("dynamodb", region_name="us-east-1")  # change region 
 # Table reference (make sure you create the table first in DynamoDB console)
 # Primary key should be something like `id` (string)
 table = dynamodb.Table("calls")
+
+def convert_floats_to_decimal(obj):
+    """Recursively convert float values in dict/list to Decimal"""
+    if isinstance(obj, dict):
+        return {k: convert_floats_to_decimal(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_floats_to_decimal(v) for v in obj]
+    elif isinstance(obj, float):
+        return Decimal(str(obj))
+    else:
+        return obj
 
 
 def insert_one(document: dict):
@@ -23,6 +35,7 @@ def insert_one(document: dict):
     document["created_at"] = datetime.utcnow().isoformat()
     document["updated_at"] = datetime.utcnow().isoformat()
     document["call_id"] = int(uuid.uuid4().int >> 64)
+    document = convert_floats_to_decimal(document)
 
     try:
         table.put_item(Item=document)
