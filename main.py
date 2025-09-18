@@ -118,7 +118,7 @@ async def upload_audio(
       conn.commit()
       print("Inserted metadata into DB")
 
-    diarize_audio(file, result.scalar_one())
+    diarize_audio(file, agent_id, customer_phone_number, s3_url)
     return JSONResponse(
       content={"message": "File uploaded successfully", "s3_url": s3_url},
       status_code=200)

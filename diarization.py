@@ -5,7 +5,7 @@ from  TranscriptionDto import TranscriptDTO
 
 import mongoConnection
 
-def diarize_audio(file: UploadFile, call_id: int):
+def diarize_audio(file: UploadFile, agent_id: int, customer_phone_number: str, s3_url: str):
   genai.configure(api_key="AIzaSyAmubwjcP1LxKFEpFU0joUcKTZrVjcYb8A")
 
   # 2. Choose a Gemini model that supports audio
@@ -31,9 +31,13 @@ def diarize_audio(file: UploadFile, call_id: int):
       generation_config={"temperature": 0.2}
   )
 
+
+
   segment = TranscriptDTO(
-    call_id=call_id,
     transcript=response.text
+    , agent_id=agent_id
+    , customer_phone_number=customer_phone_number
+    , audio_s3_path=s3_url
   )
 
   mongoConnection.insert_one(segment.dict())
