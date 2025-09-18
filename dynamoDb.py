@@ -1,7 +1,10 @@
 import json
 import uuid
-from datetime import datetime
+from datetime import datetime, date
+from typing import Optional, List
+
 import boto3
+from boto3.dynamodb.conditions import Attr
 from botocore.exceptions import ClientError
 from decimal import Decimal
 import re
@@ -143,5 +146,25 @@ def fetch_all_items():
     while 'LastEvaluatedKey' in response:
         response = table.scan(ExclusiveStartKey=response['LastEvaluatedKey'])
         items.extend(response.get("Items", []))
+
+    return items
+
+
+def get_transcripts_by_date(date_param: Optional[date]) -> List[dict]:
+    if not date_param:
+        # If no date is passed → scan everything (be careful, can be huge!)
+        response = table.scan()
+        print("Logger1", response)
+        items = response.get("Items", [])
+    else:
+        # Convert date object → ISO string (YYYY-MM-DD)
+        date_str = str(date_param)
+
+        # Scan with filter: created_at > "YYYY-MM-DD"
+        response = table.scan(
+            FilterExpression=Attr("created_at").gt(date_str)
+        )
+        print("Logger2", response)
+        items = response.get("Items", [])
 
     return items

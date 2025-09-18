@@ -12,6 +12,7 @@ from sqlalchemy import create_engine, Table, Column, Integer, String, MetaData
 from sqlalchemy.sql import insert
 from typing import Optional
 from datetime import date
+import diarization
 
 import dynamoDb
 from diarization import diarize_audio
@@ -269,4 +270,4 @@ def get_all_data():
   
 @app.get("/get-business-insights")
 def get_business_insights(date_param: Optional[date] = Query(None, description="Filter by created_at date")):
-  return []
+  return diarization.get_business_insights(date_param)
