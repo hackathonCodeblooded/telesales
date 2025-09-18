@@ -8,6 +8,8 @@ import os
 from sqlalchemy import create_engine, Table, Column, Integer, String, MetaData
 from sqlalchemy.sql import insert
 
+from diarization import diarize_audio
+
 # Create app instance
 app = FastAPI()
 
@@ -111,11 +113,12 @@ async def upload_audio(
         agent_id=agent_id,
         customer_phone_number=customer_phone_number,
         audio_s3_path=s3_url
-      )
-      conn.execute(stmt)
+      ).returning(calls.c.id)
+      result = conn.execute(stmt)
       conn.commit()
       print("Inserted metadata into DB")
 
+    diarize_audio(file, result.scalar_one())
     return JSONResponse(
       content={"message": "File uploaded successfully", "s3_url": s3_url},
       status_code=200)
