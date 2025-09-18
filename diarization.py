@@ -13,6 +13,7 @@ def diarize_audio(file: UploadFile, agent_id: int, customer_phone_number: str, s
   #file = genai.upload_file(path="audioFiles/output.wav")
   #call_id = 12345
 
+  uploaded_file = genai.upload_file(file.file, filename=file.filename)
   # 4. Send request with diarization instructions
   prompt = """
   You are a speaker diarization system. 
@@ -27,8 +28,11 @@ def diarize_audio(file: UploadFile, agent_id: int, customer_phone_number: str, s
   """
 
   response = model.generate_content(
-      [prompt, file],
-      generation_config={"temperature": 0.2}
+    [
+      prompt,
+      {"type": "input_audio", "audio": uploaded_file}
+    ],
+    generation_config={"temperature": 0.2}
   )
 
 

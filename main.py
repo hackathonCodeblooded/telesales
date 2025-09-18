@@ -1,4 +1,4 @@
-from fastapi import FastAPI, File, UploadFile, Form, HTTPException
+from fastapi import FastAPI, File, UploadFile, Form, HTTPException, Query
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -7,6 +7,7 @@ import uuid
 import os
 from sqlalchemy import create_engine, Table, Column, Integer, String, MetaData
 from sqlalchemy.sql import insert
+from typing import Optional
 
 from diarization import diarize_audio
 
@@ -70,10 +71,10 @@ def read_item(item_id: int):
   return {"item_id": item_id, "name": f"Item {item_id}"}
 
 
-# POST endpoint
-@app.post("/items")
-def create_item(item: Item):
-  return {"message": "Item created", "item": item}
+# # POST endpoint
+# @app.post("/items")
+# def create_item(item: Item):
+#   return {"message": "Item created", "item": item}
 
 
 @app.post("/upload-audio")
@@ -85,9 +86,9 @@ async def upload_audio(
   try:
     original_filename = file.filename
     ext = os.path.splitext(original_filename)[1].lower()
-    if ext not in ['.mp3', '.mp4']:
+    if ext not in ['.mp3', '.wav']:
       raise HTTPException(status_code=400,
-                          detail="Invalid file type. Only .mp3 or .mp4 allowed.")
+                          detail="Invalid file type. Only .mp3 or .wav allowed.")
 
     print("File accepted:", original_filename)
 
@@ -108,15 +109,15 @@ async def upload_audio(
     print("S3 URL:", s3_url)
 
     # Insert data into DB
-    with engine.connect() as conn:
-      stmt = insert(calls).values(
-        agent_id=agent_id,
-        customer_phone_number=customer_phone_number,
-        audio_s3_path=s3_url
-      ).returning(calls.c.id)
-      result = conn.execute(stmt)
-      conn.commit()
-      print("Inserted metadata into DB")
+    # with engine.connect() as conn:
+    #   stmt = insert(calls).values(
+    #     agent_id=agent_id,
+    #     customer_phone_number=customer_phone_number,
+    #     audio_s3_path=s3_url
+    #   ).returning(calls.c.id)
+    #   result = conn.execute(stmt)
+    #   conn.commit()
+    #   print("Inserted metadata into DB")
 
     diarize_audio(file, agent_id, customer_phone_number, s3_url)
     return JSONResponse(
@@ -126,3 +127,84 @@ async def upload_audio(
   except Exception as e:
     print("Error:", str(e))
     raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/agent-rating-data")
+def get_agent_rating_data(
+    agent_id: Optional[int] = Query(None, description="Agent ID"),
+    customer_phone_number: Optional[str] = Query(None,
+                                                 description="Customer phone number")
+):
+  # Validation: At least one parameter must be provided
+  if not agent_id and not customer_phone_number:
+    raise HTTPException(
+      status_code=400,
+      detail="At least one of agent_id or customer_phone_number must be provided"
+    )
+
+  # Mock response list (replace with DB/service logic)
+  response = [
+    {
+      "instance_id": 1,
+      "agent_id": agent_id if agent_id else "AGT001",
+      "customer_phone_number": customer_phone_number if customer_phone_number else "1234567890",
+      "overall_rating": 4.5,
+      "status": "Active",
+      "rating_parameter": [
+        {"Sentiment": "good"}
+      ]
+    },
+    {
+      "instance_id": 2,
+      "agent_id": "AGT002",
+      "customer_phone_number": "9876543210",
+      "overall_rating": 4.2,
+      "status": "Inactive",
+      "rating_parameter": [
+        {"Sentiment": "average"}
+      ]
+    }
+  ]
+  return response
+
+
+@app.get("/agent-insights")
+def get_agent_insights():
+  response = {
+    "agent_ratings": {
+      "excellent": 45,
+      "good": 78,
+      "average": 23,
+      "poor": 12
+    },
+    "performance_metrics": {
+      "total_agents": 158,
+      "top_performers": 45,
+      "needs_improvement": 35,
+      "new_agents": 18
+    }
+  }
+  return response
+
+
+@app.get("/overall-agents-metrics")
+def get_overall_agents_metrics():
+  response = {
+    "overallMetrics": {
+      "averageRating": 4.1,
+      "totalAgents": 158,
+      "totalRatings": 2847,
+      "responseTime": "2.3 hours"
+    },
+    "topPerformers": [
+      {"name": "Sarah Wilson", "rating": 4.9, "department": "Customer Support"},
+      {"name": "David Chen", "rating": 4.8, "department": "Technical Support"},
+      {"name": "Emily Davis", "rating": 4.7, "department": "Billing Support"}
+    ],
+    "departmentStats": [
+      {"department": "Customer Support", "avgRating": 4.3, "agentCount": 65},
+      {"department": "Technical Support", "avgRating": 4.0, "agentCount": 48},
+      {"department": "Billing Support", "avgRating": 3.9, "agentCount": 45}
+    ]
+  }
+  return response
