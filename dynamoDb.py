@@ -38,19 +38,14 @@ def insert_many(documents: list):
             batch.put_item(Item=doc)
 
 
-def query_by_agent(agent_id: str):
-  response = table.query(
-    KeyConditionExpression=Key("agent_id").eq(agent_id)
-  )
-  return response["Items"]
-
 def get_by_id(call_id: str):
   response = table.get_item(Key={"call_id": call_id})
   return response.get("Item")
 
-def find_by_phone(phone: str):
+
+def find_items(filter_expression):
   response = table.scan(
-    FilterExpression=Attr("customer_phone_number").eq(phone)
+    FilterExpression=filter_expression
   )
   return response["Items"]
 
